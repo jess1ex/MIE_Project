@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Speedy BEDMAS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ═══════════════ INTRO SCREEN ═══════════════ -->
+  <div id="screen-intro" class="screen active">
+    <div class="logo">
+      <div class="logo-tag">MIE286 Study</div>
+      <div class="logo-title">Speedy <span>BEDMAS</span></div>
+    </div>
+
+    <div class="card">
+      <div class="intro-body">
+        <p>Welcome! In this test you will solve as many arithmetic questions as you can.</p>
+        <ul>
+          <li>Questions involve <strong>addition, subtraction, multiplication, division</strong> — sometimes with brackets</li>
+          <li>Numbers are limited to <strong>2-digit integers</strong></li>
+          <li>Type your answer and press <strong>Enter</strong> (or tap ➜) to move on</li>
+          <li>There is no penalty for wrong answers — just keep going!</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="condition-label">Test Structure</div>
+      <div class="structure-info">
+        <div class="structure-block">
+          <div class="structure-num">4</div>
+          <div class="structure-desc">minutes total</div>
+        </div>
+        <div class="structure-divider">→</div>
+        <div class="structure-block">
+          <div class="structure-num">2</div>
+          <div class="structure-desc">rounds of 2 min</div>
+        </div>
+        <div class="structure-divider">→</div>
+        <div class="structure-block">
+          <div class="structure-num">2</div>
+          <div class="structure-desc">timing feedback styles</div>
+        </div>
+      </div>
+      <p class="structure-note">Each round has a different style of timing reminder. You will experience both.</p>
+    </div>
+
+    <div class="card">
+      <div class="consent-row">
+        <input type="checkbox" id="consent-check">
+        <label for="consent-check">
+          I agree to have my responses collected anonymously for the <strong>MIE286 course project</strong>.
+          Even if unchecked, you can still take the test — but please only attempt it <strong>once</strong>
+          to preserve data integrity.
+        </label>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="start-btn" onclick="goToPractice()">BEGIN →</button>
+  </div>
+
+  <!-- ═══════════════ PRACTICE SCREEN ═══════════════ -->
+  <div id="screen-practice" class="screen">
+    <div class="logo">
+      <div class="logo-tag">Warm-up Round</div>
+      <div class="logo-title">Get <span>Ready</span></div>
+    </div>
+
+    <div class="practice-note">
+      <strong>Trial round</strong> — try a few questions to get comfortable before the real test. These do not count.
+    </div>
+
+    <div class="card">
+      <div class="question-display">
+        <div class="question-text" id="practice-q">—</div>
+      </div>
+      <div class="answer-wrap">
+        <input class="answer-input" id="practice-input" type="number" placeholder="?"
+          autocomplete="off" onkeydown="if(event.key==='Enter') submitPractice()">
+        <button class="submit-btn" onclick="submitPractice()">➜</button>
+      </div>
+    </div>
+
+    <div id="practice-feedback" class="practice-feedback"></div>
+
+    <button class="btn btn-primary" onclick="startRealTest()">START TEST →</button>
+    <button class="btn btn-ghost" onclick="goToIntro()">← Back</button>
+  </div>
+
+  <!-- ═══════════════ ROUND TRANSITION SCREEN ═══════════════ -->
+  <div id="screen-transition" class="screen">
+    <div class="logo">
+      <div class="logo-tag">Round 1 Complete</div>
+      <div class="logo-title">Take a <span>Breath</span></div>
+    </div>
+
+    <div class="card">
+      <div class="transition-stats">
+        <div class="t-stat">
+          <div class="t-val" id="trans-answered">—</div>
+          <div class="t-lbl">Answered</div>
+        </div>
+        <div class="t-stat">
+          <div class="t-val" id="trans-correct">—</div>
+          <div class="t-lbl">Correct</div>
+        </div>
+        <div class="t-stat">
+          <div class="t-val" id="trans-acc">—</div>
+          <div class="t-lbl">Accuracy</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="font-size:14px; color: var(--muted); line-height:1.6;">
+      Round 2 will now begin with a <strong style="color:var(--text)" id="trans-next-condition">different</strong> timing style.
+      When you're ready, press the button below.
+    </div>
+
+    <button class="btn btn-primary" onclick="startRound2()">START ROUND 2 →</button>
+  </div>
+
+  <!-- ═══════════════ QUIZ SCREEN ═══════════════ -->
+  <div id="screen-quiz" class="screen">
+    <div class="quiz-header">
+      <div class="left-header">
+        <div class="round-badge" id="round-badge">Round 1</div>
+        <div class="q-counter">Q <span id="q-num">1</span></div>
+      </div>
+      <div class="timer-ring-wrap">
+        <svg width="64" height="64" viewBox="0 0 64 64">
+          <circle class="timer-ring-bg" cx="32" cy="32" r="26"/>
+          <circle class="timer-ring-fg" id="timer-ring" cx="32" cy="32" r="26"/>
+        </svg>
+        <div class="timer-label" id="timer-label">2:00</div>
+      </div>
+    </div>
+
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+
+    <div class="card">
+      <div class="question-display">
+        <div class="question-text">
+          <span id="quiz-q">—</span> <span class="question-eq">=</span>
+        </div>
+      </div>
+      <div class="answer-wrap">
+        <input class="answer-input" id="quiz-input" type="number" placeholder="?"
+          autocomplete="off" onkeydown="if(event.key==='Enter') submitAnswer()">
+        <button class="submit-btn" onclick="submitAnswer()">➜</button>
+      </div>
+    </div>
+
+    <div class="stats-bar">
+      <div class="stat-pill">
+        <div class="stat-val" id="stat-answered">0</div>
+        <div class="stat-lbl">Answered</div>
+      </div>
+      <div class="stat-pill">
+        <div class="stat-val" id="stat-correct">0</div>
+        <div class="stat-lbl">Correct</div>
+      </div>
+      <div class="stat-pill">
+        <div class="stat-val" id="stat-acc">—</div>
+        <div class="stat-lbl">Accuracy</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ COUNTDOWN OVERLAY ═══════════════ -->
+  <div id="countdown-overlay" class="countdown-overlay hidden">
+    <div class="countdown-inner">
+      <div class="countdown-number" id="countdown-number"></div>
+      <div class="countdown-label" id="countdown-label">seconds left</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ RESULTS SCREEN ═══════════════ -->
+  <div id="screen-results" class="screen">
+    <div class="results-header">Test <span>Complete!</span></div>
+
+    <div class="results-grid">
+      <div class="result-cell full">
+        <div class="results-subhead">Round 1 — <span id="res-r1-condition">—</span></div>
+      </div>
+      <div class="result-cell">
+        <div class="result-big" id="res-r1-answered">—</div>
+        <div class="result-lbl">Attempted</div>
+      </div>
+      <div class="result-cell">
+        <div class="result-big" id="res-r1-acc">—</div>
+        <div class="result-lbl">Accuracy</div>
+      </div>
+      <div class="result-cell">
+        <div class="result-big" id="res-r1-speed">—</div>
+        <div class="result-lbl">Q / min</div>
+      </div>
+      <div class="result-cell full divider">
+        <div class="results-subhead">Round 2 — <span id="res-r2-condition">—</span></div>
+      </div>
+      <div class="result-cell">
+        <div class="result-big" id="res-r2-answered">—</div>
+        <div class="result-lbl">Attempted</div>
+      </div>
+      <div class="result-cell">
+        <div class="result-big" id="res-r2-acc">—</div>
+        <div class="result-lbl">Accuracy</div>
+      </div>
+      <div class="result-cell">
+        <div class="result-big" id="res-r2-speed">—</div>
+        <div class="result-lbl">Q / min</div>
+      </div>
+    </div>
+
+    <div id="submit-status" class="submit-status">
+      <span id="submit-icon">⏳</span>
+      <span id="submit-msg">Saving your results…</span>
+    </div>
+
+    <div class="card" style="font-size:13px; color:var(--muted); line-height:1.6;">
+      Thank you for participating! Please <strong style="color:var(--text)">do not retake</strong>
+      the test to preserve data quality.
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
