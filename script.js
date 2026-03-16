@@ -27,7 +27,7 @@ document.getElementById('feedback-type-label').textContent =
 const QUESTIONS = [
   // ── Mixed: order of operations, brackets, division ────────
   { display: '99 ÷ 9 + 16',         answer: 27  },
-  { display: '8 × 5 − 6',         answer: 36  },
+  { display: '8 × 5 − 6',         answer: 34  },
   { display: '48 ÷ 6 + 25',         answer: 33  },
   { display: '5 + 36 ÷ 9',          answer: 9   },
   { display: '45 − 18 × 2',         answer: 9   },
