@@ -3,7 +3,7 @@
 // ══════════════════════════════════════════════════════════════
 
 // ▼▼▼  PASTE YOUR APPS SCRIPT WEB APP URL HERE  ▼▼▼
-const SHEET_URL = 'https://script.google.com/macros/s/AKfycbyCLufd0-kLoP-et9uOS06fLpHw5auY5TRTdXfcdSNVX-NTtMHTIjjSHvQJQjq-IFSj/exec';
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbw622GAB2kczGrNIZgKy5nmhC-amjga0CyWeXIUruGUM7W7C14veJNPwb24bywNZd0W/exec';
 // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
 
@@ -26,22 +26,28 @@ document.getElementById('feedback-type-label').textContent =
 
 const QUESTIONS = [
   // ── Mixed: order of operations, brackets, division ────────
+  { display: '99 ÷ 9 + 16',         answer: 27  },
+  { display: '8 × 5 − 6',         answer: 36  },
+  { display: '48 ÷ 6 + 25',         answer: 33  },
+  { display: '5 + 36 ÷ 9',          answer: 9   },
+  { display: '45 − 18 × 2',         answer: 9   },
   { display: '30 + 12 × 4',         answer: 78  },
+  { display: '15 × 4 − 18',         answer: 42  },
   { display: '50 − 14 × 3',         answer: 8   },
   { display: '(18 + 7) × 3',        answer: 75  },
   { display: '(30 − 14) × 5',       answer: 80  },
-  { display: '48 ÷ 6 + 25',         answer: 33  },
   { display: '63 ÷ 7 − 5',          answer: 4   },
-  { display: '15 × 4 − 18',         answer: 42  },
+  { display: '44 − 12 × 3',         answer: 8   },
   { display: '12 × 6 + 11',         answer: 83  },
   { display: '(22 + 13) × 4',       answer: 140 },
   { display: '72 ÷ 8 + 17',         answer: 26  },
-  { display: '45 − 18 × 2',         answer: 9   },
+  { display: '(24 + 16) × 3',       answer: 120 },
   { display: '(40 − 16) × 3',       answer: 72  },
   { display: '24 + 31 + 12',        answer: 67  },
   { display: '56 ÷ 7 + 34',         answer: 42  },
   { display: '13 × 5 − 27',         answer: 38  },
   { display: '(15 + 19) × 2',       answer: 68  },
+
   { display: '81 ÷ 9 − 4',          answer: 5   },
   { display: '27 + 16 × 3',         answer: 75  },
   { display: '(33 − 18) × 6',       answer: 90  },
@@ -63,13 +69,9 @@ const QUESTIONS = [
   { display: '(21 + 14) × 5',       answer: 175 },
   { display: '46 + 25 − 17',        answer: 54  },
   { display: '70 ÷ 7 − 3',          answer: 7   },
-  { display: '44 − 12 × 3',         answer: 8   },
   { display: '(36 − 19) × 4',       answer: 68  },
-  { display: '48 ÷ 6 − 5',          answer: 3   },
   { display: '13 × 6 + 24',         answer: 102 },
   { display: '(26 + 18) × 2',       answer: 88  },
-  { display: '99 ÷ 9 + 16',         answer: 27  },
-  { display: '18 × 5 − 64',         answer: 26  },
   { display: '(31 − 16) × 7',       answer: 105 },
   { display: '56 ÷ 8 + 47',         answer: 54  },
   { display: '25 + 14 × 6',         answer: 109 },
