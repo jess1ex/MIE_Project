@@ -3,7 +3,7 @@
 // ══════════════════════════════════════════════════════════════
 
 // ▼▼▼  PASTE YOUR APPS SCRIPT WEB APP URL HERE  ▼▼▼
-const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1E_VmoF8JbComMX_PTo0aOsjr0TAS_fDK1pchNyQjby4/edit?gid=275621255#gid=275621255';
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbyCLufd0-kLoP-et9uOS06fLpHw5auY5TRTdXfcdSNVX-NTtMHTIjjSHvQJQjq-IFSj/exec';
 // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
 
@@ -20,95 +20,63 @@ document.getElementById('feedback-type-label').textContent =
 
 
 // ══════════════════════════════════════════════════════════════
-//  QUESTION BANK — 100 fixed questions, seeded for consistency
-//  Rules: 3 numbers, up to 3 operations, multiplication capped
-//  at 2-digit × 1-digit
+//  QUESTION BANK — 50 hardcoded problems
+//  Multiplication capped at 2-digit × 1-digit throughout
 // ══════════════════════════════════════════════════════════════
 
-const QUESTIONS = (function () {
-  function seededRng(seed) {
-    let s = seed >>> 0;
-    return () => {
-      s = Math.imul(1664525, s) + 1013904223 >>> 0;
-      return s / 0x100000000;
-    };
-  }
-
-  const rng     = seededRng(286);
-  const ri      = (min, max) => Math.floor(rng() * (max - min + 1)) + min;
-  const pick    = arr => arr[Math.floor(rng() * arr.length)];
-
-  // ── Type A: a ± b ± c  (pure addition/subtraction) ──────────
-  function typeA() {
-    const a = ri(10, 60), b = ri(10, 30), c = ri(10, 20);
-    const op1 = pick(['+', '−']), op2 = pick(['+', '−']);
-    const mid = op1 === '+' ? a + b : a - b;
-    const ans = op2 === '+' ? mid + c : mid - c;
-    if (ans < 0) return typeA();
-    return { display: `${a} ${op1} ${b} ${op2} ${c}`, answer: ans };
-  }
-
-  // ── Type B: a ± b × c  (one multiplication, order of ops) ───
-  // b is 2-digit, c is 1-digit (cap rule)
-  function typeB() {
-    const a  = ri(10, 60);
-    const b  = ri(10, 19);   // 2-digit
-    const c  = ri(2, 9);     // 1-digit
-    const op = pick(['+', '−']);
-    const ans = op === '+' ? a + b * c : a - b * c;
-    if (ans < 0) return typeB();
-    return { display: `${a} ${op} ${b} × ${c}`, answer: ans };
-  }
-
-  // ── Type C: (a ± b) × c  (brackets first, then multiply) ────
-  // result of bracket is 2-digit, c is 1-digit
-  function typeC() {
-    const c   = ri(2, 9);
-    const op  = pick(['+', '−']);
-    const a   = ri(10, 30);
-    const b   = ri(10, 20);
-    const mid = op === '+' ? a + b : a - b;
-    if (mid <= 9 || mid > 99) return typeC();  // keep bracket result 2-digit
-    const ans = mid * c;
-    return { display: `(${a} ${op} ${b}) × ${c}`, answer: ans };
-  }
-
-  // ── Type D: a ÷ b ± c  (exact division, then add/subtract) ──
-  function typeD() {
-    const b   = ri(2, 9);
-    const res = ri(2, 12);
-    const a   = b * res;          // guarantees integer result
-    const c   = ri(10, 30);
-    const op  = pick(['+', '−']);
-    const ans = op === '+' ? res + c : res - c;
-    if (ans < 0) return typeD();
-    return { display: `${a} ÷ ${b} ${op} ${c}`, answer: ans };
-  }
-
-  // ── Type E: a × b ÷ c  (multiply then divide exactly) ───────
-  // a is 2-digit, b is 1-digit
-  function typeE() {
-    const c   = ri(2, 9);
-    const res = ri(2, 12);
-    const a   = c * res;           // a divisible by c, but could be > 2 digits
-    if (a < 10 || a > 99) return typeE();
-    const b   = ri(2, 9);          // 1-digit
-    const ans = (a * b) / c;       // = res × b, always integer
-    return { display: `${a} × ${b} ÷ ${c}`, answer: ans };
-  }
-
-  // 20 of each type, shuffled
-  const types    = [typeA, typeB, typeC, typeD, typeE];
-  const typeList = [];
-  for (const t of types) for (let i = 0; i < 20; i++) typeList.push(t);
-
-  for (let i = typeList.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [typeList[i], typeList[j]] = [typeList[j], typeList[i]];
-  }
-
-  return typeList.map(fn => fn());
-})();
+const QUESTIONS = [
+  // ── Mixed: order of operations, brackets, division ────────
+  { display: '30 + 12 × 4',         answer: 78  },
+  { display: '50 − 14 × 3',         answer: 8   },
+  { display: '(18 + 7) × 3',        answer: 75  },
+  { display: '(30 − 14) × 5',       answer: 80  },
+  { display: '48 ÷ 6 + 25',         answer: 33  },
+  { display: '63 ÷ 7 − 5',          answer: 4   },
+  { display: '15 × 4 − 18',         answer: 42  },
+  { display: '12 × 6 + 11',         answer: 83  },
+  { display: '(22 + 13) × 4',       answer: 140 },
+  { display: '72 ÷ 8 + 17',         answer: 26  },
+  { display: '45 − 18 × 2',         answer: 9   },
+  { display: '(40 − 16) × 3',       answer: 72  },
+  { display: '24 + 31 + 12',        answer: 67  },
+  { display: '56 ÷ 7 + 34',         answer: 42  },
+  { display: '13 × 5 − 27',         answer: 38  },
+  { display: '(15 + 19) × 2',       answer: 68  },
+  { display: '81 ÷ 9 − 4',          answer: 5   },
+  { display: '27 + 16 × 3',         answer: 75  },
+  { display: '(33 − 18) × 6',       answer: 90  },
+  { display: '64 ÷ 8 + 29',         answer: 37  },
+  { display: '14 × 7 − 36',         answer: 62  },
+  { display: '53 − 18 + 14',        answer: 49  },
+  { display: '(24 + 16) × 3',       answer: 120 },
+  { display: '90 ÷ 9 + 43',         answer: 53  },
+  { display: '55 − 13 × 4',         answer: 3   },
+  { display: '(28 − 13) × 5',       answer: 75  },
+  { display: '36 ÷ 4 + 19',         answer: 28  },
+  { display: '11 × 8 − 45',         answer: 43  },
+  { display: '(17 + 23) × 4',       answer: 160 },
+  { display: '54 ÷ 6 − 7',          answer: 2   },
+  { display: '32 + 15 × 5',         answer: 107 },
+  { display: '(45 − 27) × 3',       answer: 54  },
+  { display: '42 ÷ 7 + 38',         answer: 44  },
+  { display: '16 × 6 − 58',         answer: 38  },
+  { display: '(21 + 14) × 5',       answer: 175 },
+  { display: '46 + 25 − 17',        answer: 54  },
+  { display: '70 ÷ 7 − 3',          answer: 7   },
+  { display: '44 − 12 × 3',         answer: 8   },
+  { display: '(36 − 19) × 4',       answer: 68  },
+  { display: '48 ÷ 6 − 5',          answer: 3   },
+  { display: '13 × 6 + 24',         answer: 102 },
+  { display: '(26 + 18) × 2',       answer: 88  },
+  { display: '99 ÷ 9 + 16',         answer: 27  },
+  { display: '18 × 5 − 64',         answer: 26  },
+  { display: '(31 − 16) × 7',       answer: 105 },
+  { display: '56 ÷ 8 + 47',         answer: 54  },
+  { display: '25 + 14 × 6',         answer: 109 },
+  { display: '62 − 24 − 11',        answer: 27  },
+  { display: '(19 + 21) × 4',       answer: 160 },
+  { display: '84 ÷ 7 − 8',          answer: 4   },
+];
 
 
 // ══════════════════════════════════════════════════════════════
