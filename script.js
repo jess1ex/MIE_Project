@@ -3,18 +3,29 @@
 // ══════════════════════════════════════════════════════════════
 
 // ▼▼▼  PASTE YOUR APPS SCRIPT WEB APP URL HERE  ▼▼▼
-const SHEET_URL = 'https://script.google.com/macros/s/AKfycbz-8ocEQVM8a7KXJr_nhEJ0zPCuE9Nvn-RlG6pqjsy6GP8VsFfMVPRl2KG8lco0hzna/exec';
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1E_VmoF8JbComMX_PTo0aOsjr0TAS_fDK1pchNyQjby4/edit?gid=275621255#gid=275621255';
 // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
 
 // ══════════════════════════════════════════════════════════════
-//  QUESTION BANK
-//  100 multi-operation BEDMAS questions, fixed seed.
-//  Same order for every participant.
+//  CONDITION — randomised once per page load
+//  50% of visitors get 'frequent', 50% get 'delayed'
+// ══════════════════════════════════════════════════════════════
+
+const CONDITION = Math.random() < 0.5 ? 'frequent' : 'delayed';
+
+// Show the assigned feedback type number on the intro checklist
+document.getElementById('feedback-type-label').textContent =
+  CONDITION === 'frequent' ? '1 (every 10 seconds)' : '2 (last 10 seconds only)';
+
+
+// ══════════════════════════════════════════════════════════════
+//  QUESTION BANK — 100 fixed questions, seeded for consistency
+//  Rules: 3 numbers, up to 3 operations, multiplication capped
+//  at 2-digit × 1-digit
 // ══════════════════════════════════════════════════════════════
 
 const QUESTIONS = (function () {
-  // Seeded PRNG — guarantees identical questions every run
   function seededRng(seed) {
     let s = seed >>> 0;
     return () => {
@@ -23,80 +34,74 @@ const QUESTIONS = (function () {
     };
   }
 
-  const rng = seededRng(286);
-  const randInt = (min, max) => Math.floor(rng() * (max - min + 1)) + min;
+  const rng     = seededRng(286);
+  const ri      = (min, max) => Math.floor(rng() * (max - min + 1)) + min;
+  const pick    = arr => arr[Math.floor(rng() * arr.length)];
 
-  // ── Single-value operand (always 2-digit integers) ──────────
-  function operand() { return randInt(10, 19); }
-
-  // ── Question generators ──────────────────────────────────────
-
-  // Type A: a ○ b ○ c  (no brackets, left-to-right with +/−)
+  // ── Type A: a ± b ± c  (pure addition/subtraction) ──────────
   function typeA() {
-    const a = randInt(10, 50);
-    const b = randInt(10, 30);
-    const c = randInt(10, 20);
-    const ops = ['+', '−'];
-    const op1 = ops[Math.floor(rng() * 2)];
-    const op2 = ops[Math.floor(rng() * 2)];
-    const val1 = op1 === '+' ? a + b : a - b;
-    const ans  = op2 === '+' ? val1 + c : val1 - c;
-    // keep answer positive
+    const a = ri(10, 60), b = ri(10, 30), c = ri(10, 20);
+    const op1 = pick(['+', '−']), op2 = pick(['+', '−']);
+    const mid = op1 === '+' ? a + b : a - b;
+    const ans = op2 === '+' ? mid + c : mid - c;
     if (ans < 0) return typeA();
     return { display: `${a} ${op1} ${b} ${op2} ${c}`, answer: ans };
   }
 
-  // Type B: a ○ b × c  (one multiplication)
+  // ── Type B: a ± b × c  (one multiplication, order of ops) ───
+  // b is 2-digit, c is 1-digit (cap rule)
   function typeB() {
-    const a  = randInt(10, 60);
-    const b  = randInt(2, 9);
-    const c  = randInt(2, 9);
-    const op = rng() < 0.5 ? '+' : '−';
+    const a  = ri(10, 60);
+    const b  = ri(10, 19);   // 2-digit
+    const c  = ri(2, 9);     // 1-digit
+    const op = pick(['+', '−']);
     const ans = op === '+' ? a + b * c : a - b * c;
     if (ans < 0) return typeB();
     return { display: `${a} ${op} ${b} × ${c}`, answer: ans };
   }
 
-  // Type C: (a ○ b) × c  (bracket forces add/subtract first)
+  // ── Type C: (a ± b) × c  (brackets first, then multiply) ────
+  // result of bracket is 2-digit, c is 1-digit
   function typeC() {
-    const a  = randInt(10, 30);
-    const b  = randInt(10, 20);
-    const c  = randInt(2, 9);
-    const op = rng() < 0.5 ? '+' : '−';
-    const inner = op === '+' ? a + b : a - b;
-    if (inner <= 0) return typeC();
-    const ans = inner * c;
+    const c   = ri(2, 9);
+    const op  = pick(['+', '−']);
+    const a   = ri(10, 30);
+    const b   = ri(10, 20);
+    const mid = op === '+' ? a + b : a - b;
+    if (mid <= 9 || mid > 99) return typeC();  // keep bracket result 2-digit
+    const ans = mid * c;
     return { display: `(${a} ${op} ${b}) × ${c}`, answer: ans };
   }
 
-  // Type D: (a × b) ÷ c  (exact division guaranteed)
+  // ── Type D: a ÷ b ± c  (exact division, then add/subtract) ──
   function typeD() {
-    const c   = randInt(2, 9);
-    const res = randInt(2, 12);
-    const a   = c * res;           // a is divisible by c
-    const b   = randInt(2, 9);
-    const ans = a * b / c;         // = res × b, always integer
-    return { display: `(${a} × ${b}) ÷ ${c}`, answer: ans };
-  }
-
-  // Type E: a ÷ b + c  or  a ÷ b − c
-  function typeE() {
-    const b   = randInt(2, 9);
-    const res = randInt(2, 12);
-    const a   = b * res;
-    const c   = randInt(10, 20);
-    const op  = rng() < 0.5 ? '+' : '−';
+    const b   = ri(2, 9);
+    const res = ri(2, 12);
+    const a   = b * res;          // guarantees integer result
+    const c   = ri(10, 30);
+    const op  = pick(['+', '−']);
     const ans = op === '+' ? res + c : res - c;
-    if (ans < 0) return typeE();
+    if (ans < 0) return typeD();
     return { display: `${a} ÷ ${b} ${op} ${c}`, answer: ans };
   }
 
-  // Distribute types evenly: 20 of each across 100 questions
-  const types = [typeA, typeB, typeC, typeD, typeE];
+  // ── Type E: a × b ÷ c  (multiply then divide exactly) ───────
+  // a is 2-digit, b is 1-digit
+  function typeE() {
+    const c   = ri(2, 9);
+    const res = ri(2, 12);
+    const a   = c * res;           // a divisible by c, but could be > 2 digits
+    if (a < 10 || a > 99) return typeE();
+    const b   = ri(2, 9);          // 1-digit
+    const ans = (a * b) / c;       // = res × b, always integer
+    return { display: `${a} × ${b} ÷ ${c}`, answer: ans };
+  }
+
+  // 20 of each type, shuffled
+  const types    = [typeA, typeB, typeC, typeD, typeE];
   const typeList = [];
   for (const t of types) for (let i = 0; i < 20; i++) typeList.push(t);
 
-  // Shuffle
   for (let i = typeList.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
     [typeList[i], typeList[j]] = [typeList[j], typeList[i]];
@@ -107,16 +112,13 @@ const QUESTIONS = (function () {
 
 
 // ══════════════════════════════════════════════════════════════
-//  PRACTICE QUESTIONS
+//  PRACTICE QUESTIONS (exactly 3, as stated in checklist)
 // ══════════════════════════════════════════════════════════════
 
 const PRACTICE = [
-  { display: '7 + 8',           answer: 15 },
-  { display: '24 − 9',          answer: 15 },
-  { display: '6 × 7',           answer: 42 },
-  { display: '36 ÷ 4',          answer: 9  },
-  { display: '(12 + 3) × 4',    answer: 60 },
-  { display: '20 + 3 × 5',      answer: 35 },
+  { display: '(12 + 3) × 4',  answer: 60 },
+  { display: '20 + 3 × 5',    answer: 35 },
+  { display: '36 ÷ 4 − 6',    answer: 3  },
 ];
 let practiceIdx = 0;
 
@@ -125,24 +127,47 @@ let practiceIdx = 0;
 //  STATE
 // ══════════════════════════════════════════════════════════════
 
-const ROUND_SECONDS = 120;   // 2 minutes per round
-const CIRCUMFERENCE = 2 * Math.PI * 26; // SVG ring
+const ROUND_SECONDS = 60;
+const CIRCUMFERENCE = 2 * Math.PI * 26;
 
-// Randomise condition order — counterbalanced across participants
-// Half get frequent→delayed, half get delayed→frequent
-const CONDITION_ORDER = Math.random() < 0.5
-  ? ['frequent', 'delayed']
-  : ['delayed', 'frequent'];
-
-let currentRound  = 0;   // 0 = round 1, 1 = round 2
 let timerInterval = null;
 let secondsLeft   = ROUND_SECONDS;
 let currentQ      = 0;
 let answered      = 0;
 let correct       = 0;
 
-// Per-round results stored here
-const roundResults = [null, null];
+
+// ══════════════════════════════════════════════════════════════
+//  BEEP — generated with Web Audio API (no external file needed)
+// ══════════════════════════════════════════════════════════════
+
+let audioCtx = null;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playBeep(freq = 880, duration = 0.12, volume = 0.35) {
+  try {
+    const ctx  = getAudioCtx();
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.type            = 'sine';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(volume, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration);
+  } catch (e) {
+    // Audio not available — silently skip
+  }
+}
 
 
 // ══════════════════════════════════════════════════════════════
@@ -154,8 +179,26 @@ function showScreen(id) {
   document.getElementById(id).classList.add('active');
 }
 
-function goToIntro()    { showScreen('screen-intro'); }
-function goToPractice() { practiceIdx = 0; showPracticeQ(); showScreen('screen-practice'); }
+function goToIntro() { showScreen('screen-intro'); }
+
+function goToPractice() {
+  // Unlock audio context on first user interaction
+  getAudioCtx();
+  practiceIdx = 0;
+  showPracticeQ();
+  showScreen('screen-practice');
+}
+
+
+// ══════════════════════════════════════════════════════════════
+//  INTRO — checklist gating
+// ══════════════════════════════════════════════════════════════
+
+function updateStartBtn() {
+  const boxes = document.querySelectorAll('.check-box');
+  const allChecked = [...boxes].every(b => b.checked);
+  document.getElementById('start-btn').disabled = !allChecked;
+}
 
 
 // ══════════════════════════════════════════════════════════════
@@ -163,11 +206,24 @@ function goToPractice() { practiceIdx = 0; showPracticeQ(); showScreen('screen-p
 // ══════════════════════════════════════════════════════════════
 
 function showPracticeQ() {
-  if (practiceIdx >= PRACTICE.length) practiceIdx = 0;
+  const progressEl = document.getElementById('practice-progress');
+  const startBtn   = document.getElementById('start-real-btn');
+
+  if (practiceIdx >= PRACTICE.length) {
+    // All 3 done — reveal the start button
+    document.getElementById('practice-q').textContent = 'Practice complete!';
+    document.getElementById('practice-input').style.display = 'none';
+    document.querySelector('.submit-btn').style.display = 'none';
+    progressEl.textContent = 'All 3 done ✓';
+    startBtn.style.display = 'block';
+    return;
+  }
+
   document.getElementById('practice-q').textContent =
     PRACTICE[practiceIdx].display + ' =';
   document.getElementById('practice-input').value = '';
   document.getElementById('practice-feedback').textContent = '';
+  progressEl.textContent = `Problem ${practiceIdx + 1} of 3`;
   document.getElementById('practice-input').focus();
 }
 
@@ -177,11 +233,11 @@ function submitPractice() {
   const fb    = document.getElementById('practice-feedback');
   if (isNaN(val)) return;
 
-  const correct = val === PRACTICE[practiceIdx].answer;
-  fb.textContent = correct
+  const isCorrect = val === PRACTICE[practiceIdx].answer;
+  fb.textContent  = isCorrect
     ? '✓ Correct!'
     : `✗ Answer was ${PRACTICE[practiceIdx].answer}`;
-  fb.style.color = correct ? 'var(--correct)' : 'var(--wrong)';
+  fb.style.color  = isCorrect ? 'var(--correct)' : 'var(--wrong)';
 
   practiceIdx++;
   setTimeout(showPracticeQ, 700);
@@ -193,19 +249,10 @@ function submitPractice() {
 // ══════════════════════════════════════════════════════════════
 
 function startRealTest() {
-  currentRound = 0;
-  beginRound();
-}
-
-function beginRound() {
-  // Reset per-round counters
   secondsLeft = ROUND_SECONDS;
   currentQ    = 0;
   answered    = 0;
   correct     = 0;
-
-  // Update round badge
-  document.getElementById('round-badge').textContent = `Round ${currentRound + 1}`;
 
   updateStats();
   loadQuestion();
@@ -214,40 +261,24 @@ function beginRound() {
   startTimer();
 }
 
-function startRound2() {
-  currentRound = 1;
-  beginRound();
-}
-
 function loadQuestion() {
-  // Use a different slice of questions for each round
-  const offset = currentRound * 50;
-  const idx    = offset + currentQ;
+  if (currentQ >= QUESTIONS.length) { endTest(); return; }
 
-  if (idx >= QUESTIONS.length || currentQ >= 50) {
-    endRound();
-    return;
-  }
-
-  document.getElementById('quiz-q').textContent = QUESTIONS[idx].display;
+  document.getElementById('quiz-q').textContent = QUESTIONS[currentQ].display;
   document.getElementById('quiz-input').value   = '';
   document.getElementById('q-num').textContent  = currentQ + 1;
-  document.getElementById('progress-fill').style.width =
-    `${(currentQ / 50) * 100}%`;
   document.getElementById('quiz-input').focus();
 }
 
 function submitAnswer() {
-  const input = document.getElementById('quiz-input');
-  const val   = parseInt(input.value);
+  const input     = document.getElementById('quiz-input');
+  const val       = parseInt(input.value);
   if (isNaN(val)) return;
 
   answered++;
-  const offset    = currentRound * 50;
-  const isCorrect = val === QUESTIONS[offset + currentQ].answer;
+  const isCorrect = val === QUESTIONS[currentQ].answer;
   if (isCorrect) correct++;
 
-  // Flash border
   input.classList.add(isCorrect ? 'flash-correct' : 'flash-wrong');
   setTimeout(() => input.classList.remove('flash-correct', 'flash-wrong'), 200);
 
@@ -274,7 +305,7 @@ function startTimer() {
     secondsLeft--;
     updateTimerDisplay();
     handleFeedback();
-    if (secondsLeft <= 0) endRound();
+    if (secondsLeft <= 0) endTest();
   }, 1000);
 }
 
@@ -298,112 +329,70 @@ function updateTimerDisplay() {
 
 
 // ══════════════════════════════════════════════════════════════
-//  COUNTDOWN OVERLAY
-//  Shows a large translucent number on screen
+//  COUNTDOWN BANNER + BEEP
 // ══════════════════════════════════════════════════════════════
 
-let overlayTimeout = null;
+let bannerTimeout = null;
 
-function showCountdownOverlay(number, isUrgent = false) {
-  const overlay = document.getElementById('countdown-overlay');
-  const numEl   = document.getElementById('countdown-number');
-  const lblEl   = document.getElementById('countdown-label');
+function showCountdownBanner(number, isUrgent = false) {
+  const banner = document.getElementById('countdown-banner');
+  const numEl  = document.getElementById('countdown-number');
+  const lblEl  = document.getElementById('countdown-label');
 
   numEl.textContent = number;
-  numEl.classList.toggle('urgent', isUrgent);
   lblEl.textContent = number === 1 ? 'second left' : 'seconds left';
 
-  // Re-trigger animation by cloning the inner element
-  const inner    = overlay.querySelector('.countdown-inner');
-  const newInner = inner.cloneNode(true);
-  overlay.replaceChild(newInner, inner);
+  banner.classList.remove('hidden', 'urgent');
+  if (isUrgent) banner.classList.add('urgent');
 
-  overlay.classList.remove('hidden');
+  // Re-trigger the pop animation
+  banner.style.animation = 'none';
+  banner.offsetHeight;   // reflow
+  banner.style.animation = '';
 
-  clearTimeout(overlayTimeout);
-  overlayTimeout = setTimeout(() => overlay.classList.add('hidden'), 1800);
+  // Play beep — higher pitch for urgent
+  playBeep(isUrgent ? 1046 : 880, 0.12, 0.3);
+
+  clearTimeout(bannerTimeout);
+  bannerTimeout = setTimeout(() => banner.classList.add('hidden'), 1800);
 }
 
 function handleFeedback() {
-  const condition = CONDITION_ORDER[currentRound];
-
-  if (condition === 'frequent') {
-    // Show overlay every 10 seconds (110, 100, 90 ... 10)
+  if (CONDITION === 'frequent') {
+    // Announce every 10 seconds: 50, 40, 30, 20 — then once at 10
     if (secondsLeft > 0 && secondsLeft % 10 === 0) {
-      showCountdownOverlay(secondsLeft, secondsLeft <= 10);
+      showCountdownBanner(secondsLeft, secondsLeft <= 10);
     }
   } else {
-    // Only show in the last 10 seconds, one number at a time
-    if (secondsLeft <= 10 && secondsLeft > 0) {
-      showCountdownOverlay(secondsLeft, true);
+    // Delayed: show once exactly when 10 seconds remain, then nothing
+    if (secondsLeft === 10) {
+      showCountdownBanner(10, true);
     }
   }
 }
 
 
 // ══════════════════════════════════════════════════════════════
-//  ROUND END
+//  END TEST
 // ══════════════════════════════════════════════════════════════
 
-function endRound() {
+function endTest() {
   stopTimer();
-  document.getElementById('countdown-overlay').classList.add('hidden');
+  document.getElementById('countdown-banner').classList.add('hidden');
 
-  const elapsed = (ROUND_SECONDS - secondsLeft) / 60 || 2;
+  const elapsed = (ROUND_SECONDS - secondsLeft) / 60 || 1;
   const speed   = parseFloat((answered / elapsed).toFixed(1));
   const acc     = answered > 0 ? Math.round((correct / answered) * 100) : 0;
 
-  roundResults[currentRound] = {
-    condition: CONDITION_ORDER[currentRound],
-    answered,
-    correct,
-    accuracy: acc,
-    speed,
-  };
-
-  if (currentRound === 0) {
-    showTransitionScreen();
-  } else {
-    showResults();
-  }
-}
-
-function showTransitionScreen() {
-  const r = roundResults[0];
-  document.getElementById('trans-answered').textContent = r.answered;
-  document.getElementById('trans-correct').textContent  = r.correct;
-  document.getElementById('trans-acc').textContent      = r.accuracy + '%';
-
-  const nextCond = CONDITION_ORDER[1];
-  document.getElementById('trans-next-condition').textContent =
-    nextCond === 'frequent' ? 'frequent timing reminders' : 'minimal timing reminders';
-
-  showScreen('screen-transition');
-}
-
-
-// ══════════════════════════════════════════════════════════════
-//  RESULTS
-// ══════════════════════════════════════════════════════════════
-
-function showResults() {
-  const condLabel = c => c === 'frequent' ? 'Frequent' : 'Delayed';
-
-  const r1 = roundResults[0];
-  const r2 = roundResults[1];
-
-  document.getElementById('res-r1-condition').textContent = condLabel(r1.condition);
-  document.getElementById('res-r1-answered').textContent  = r1.answered;
-  document.getElementById('res-r1-acc').textContent       = r1.accuracy + '%';
-  document.getElementById('res-r1-speed').textContent     = r1.speed;
-
-  document.getElementById('res-r2-condition').textContent = condLabel(r2.condition);
-  document.getElementById('res-r2-answered').textContent  = r2.answered;
-  document.getElementById('res-r2-acc').textContent       = r2.accuracy + '%';
-  document.getElementById('res-r2-speed').textContent     = r2.speed;
+  document.getElementById('res-answered').textContent = answered;
+  document.getElementById('res-correct').textContent  = correct;
+  document.getElementById('res-accuracy').textContent = acc + '%';
+  document.getElementById('res-speed').textContent    = speed;
+  document.getElementById('res-condition').textContent =
+    CONDITION === 'frequent' ? 'Type 1 — Frequent (every 10s)' : 'Type 2 — Delayed (last 10s only)';
 
   showScreen('screen-results');
-  submitToSheets();
+  submitToSheets({ answered, correct, accuracy: acc, speed, condition: CONDITION });
 }
 
 
@@ -411,16 +400,19 @@ function showResults() {
 //  GOOGLE SHEETS SUBMISSION
 // ══════════════════════════════════════════════════════════════
 
-async function submitToSheets() {
+async function submitToSheets({ answered, correct, accuracy, speed, condition }) {
   const statusEl  = document.getElementById('submit-status');
   const iconEl    = document.getElementById('submit-icon');
   const msgEl     = document.getElementById('submit-msg');
-  const consented = document.getElementById('consent-check').checked;
+
+  // Consent is implied by checking the last checklist item
+  const boxes     = document.querySelectorAll('.check-box');
+  const consented = [...boxes].every(b => b.checked);
 
   if (!consented) {
-    statusEl.className  = 'submit-status no-consent';
-    iconEl.textContent  = 'ℹ️';
-    msgEl.textContent   = 'No data collected (consent not given)';
+    statusEl.className = 'submit-status no-consent';
+    iconEl.textContent = 'ℹ️';
+    msgEl.textContent  = 'No data collected (consent not given)';
     return;
   }
 
@@ -431,24 +423,15 @@ async function submitToSheets() {
     return;
   }
 
-  const r1 = roundResults[0];
-  const r2 = roundResults[1];
-
   const payload = {
-    timestamp:       new Date().toISOString(),
-    conditionOrder:  CONDITION_ORDER.join(' → '),
-    r1_condition:    r1.condition,
-    r1_answered:     r1.answered,
-    r1_correct:      r1.correct,
-    r1_accuracy:     r1.accuracy,
-    r1_speed:        r1.speed,
-    r2_condition:    r2.condition,
-    r2_answered:     r2.answered,
-    r2_correct:      r2.correct,
-    r2_accuracy:     r2.accuracy,
-    r2_speed:        r2.speed,
-    consented:       true,
-    userAgent:       navigator.userAgent.slice(0, 80),
+    timestamp: new Date().toISOString(),
+    condition,
+    answered,
+    correct,
+    accuracy,
+    speed,
+    consented: true,
+    userAgent: navigator.userAgent.slice(0, 80),
   };
 
   try {
