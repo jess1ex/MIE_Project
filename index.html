@@ -111,13 +111,12 @@
       </div>
     </div>
 
-    <!-- Countdown banner sits here in the flow, above the card -->
-    <div id="countdown-banner" class="countdown-banner hidden">
-      <span class="countdown-number" id="countdown-number"></span>
-      <span class="countdown-label" id="countdown-label">seconds left</span>
-    </div>
-
     <div class="card">
+      <!-- Banner is inside the card so it can float over it without shifting layout -->
+      <div id="countdown-banner" class="countdown-banner hidden">
+        <span class="countdown-number" id="countdown-number"></span>
+        <span class="countdown-label" id="countdown-label">seconds left</span>
+      </div>
       <div class="question-display">
         <div class="question-text">
           <span id="quiz-q">—</span> <span class="question-eq">=</span>
@@ -173,13 +172,17 @@
       </div>
     </div>
 
+    <div id="save-warning" class="save-warning">
+      ⚠️ &nbsp;Do not close this page until your results have saved
+    </div>
+
     <div id="submit-status" class="submit-status">
       <span id="submit-icon">⏳</span>
       <span id="submit-msg">Saving your results…</span>
     </div>
 
-    <div class="card" style="font-size:13px; color:var(--muted); line-height:1.6;">
-      Thank you for participating! Please <strong style="color:var(--text)">do not retake</strong>
+    <div class="card" style="font-size:17px; color:var(--text); line-height:1.6; text-align:center;">
+      Thank you for participating! Please <strong style="color:var(--accent)">do not retake</strong>
       the test to preserve data quality.
     </div>
   </div>
